@@ -1,0 +1,5 @@
+{
+  "name": "Éditeur d'Images IA",
+  "description": "Téléversez une image, décrivez une modification, et laissez l'IA générer une nouvelle version. Une application de retouche photo intuitive alimentée par Gemini.",
+  "requestFramePermissions": []
+}
