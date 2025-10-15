@@ -12,6 +12,7 @@ const ZoomViewer: React.FC<ZoomViewerProps> = ({ imageUrl, onClose }) => {
   const lastMousePosition = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const initialScaleRef = useRef<number>(0.1); // Pour stocker l'échelle "fit"
 
   const resetView = useCallback(() => {
     if (!imageRef.current || !containerRef.current) return;
@@ -23,6 +24,8 @@ const ZoomViewer: React.FC<ZoomViewerProps> = ({ imageUrl, onClose }) => {
     const scaleY = clientHeight / naturalHeight;
     const initialScale = Math.min(scaleX, scaleY, 1); // Ne pas agrandir l'image au-delà de sa taille réelle initialement
     
+    initialScaleRef.current = Math.max(0.01, initialScale); // S'assurer que le min n'est pas zéro
+
     setTransform({
       scale: initialScale,
       x: (clientWidth - naturalWidth * initialScale) / 2,
@@ -75,6 +78,20 @@ const ZoomViewer: React.FC<ZoomViewerProps> = ({ imageUrl, onClose }) => {
     setTransform({ scale: clampedScale, x: newX, y: newY });
   };
 
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!containerRef.current) return;
+    const newScale = parseFloat(e.target.value);
+
+    const { clientWidth, clientHeight } = containerRef.current;
+    const centerX = clientWidth / 2;
+    const centerY = clientHeight / 2;
+
+    const newX = centerX - (centerX - transform.x) * (newScale / transform.scale);
+    const newY = centerY - (centerY - transform.y) * (newScale / transform.scale);
+
+    setTransform({ scale: newScale, x: newX, y: newY });
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsPanning(true);
@@ -95,8 +112,7 @@ const ZoomViewer: React.FC<ZoomViewerProps> = ({ imageUrl, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-grab"
-      onMouseDown={handleMouseDown}
+      className="fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-4 cursor-grab"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUpOrLeave}
       onMouseLeave={handleMouseUpOrLeave}
@@ -106,6 +122,7 @@ const ZoomViewer: React.FC<ZoomViewerProps> = ({ imageUrl, onClose }) => {
       <div 
         ref={containerRef}
         className="w-full h-full relative overflow-hidden"
+        onMouseDown={handleMouseDown}
       >
         <img
           ref={imageRef}
@@ -136,6 +153,24 @@ const ZoomViewer: React.FC<ZoomViewerProps> = ({ imageUrl, onClose }) => {
       >
         <ResetViewIcon />
       </button>
+
+      {/* Barre de zoom */}
+      <div 
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 w-1/2 max-w-xs bg-gray-900/60 p-2 rounded-lg flex items-center gap-3 z-20 backdrop-blur-sm"
+        onClick={(e) => e.stopPropagation()} // Empêche la fermeture
+        onMouseDown={(e) => e.stopPropagation()} // Empêche le panoramique
+      >
+        <input
+          type="range"
+          min={initialScaleRef.current}
+          max="10"
+          step="0.01"
+          value={transform.scale}
+          onChange={handleSliderChange}
+          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg accent-purple-500"
+          aria-label="Barre de zoom"
+        />
+      </div>
     </div>
   );
 };
